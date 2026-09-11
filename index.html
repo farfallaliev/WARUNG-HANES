@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Warung Hanes - Sistem Kasir & Transaksi Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 font-['Plus_Jakarta_Sans'] min-h-screen flex flex-col">
+
+    <!-- ================= LOGIN SCREEN OVERLAY ================= -->
+    <div id="login-screen" class="fixed inset-0 z-[100] bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-blue-600 p-6 text-center text-white">
+                <div class="bg-white text-blue-600 w-14 h-14 mx-auto rounded-2xl flex items-center justify-center text-2xl shadow-md mb-3">
+                    <i class="fa-solid fa-store"></i>
+                </div>
+                <h1 class="font-extrabold text-2xl tracking-tight">WARUNG HANES</h1>
+                <p class="text-xs text-blue-100">Silakan login untuk mengakses kasir</p>
+            </div>
+            <form onsubmit="handleLogin(event)" class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Username</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="login-username" required placeholder="cth: admin" class="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Password</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="password" id="login-password" required placeholder="••••••" class="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+                </div>
+                <p id="login-error" class="hidden text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2"></p>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-sm shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> Masuk ke Aplikasi
+                </button>
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 text-[11px] text-slate-600 leading-relaxed">
+                    <p class="font-bold text-slate-700 mb-1"><i class="fa-solid fa-circle-info text-blue-600 mr-1"></i> Akun bawaan:</p>
+                    <p>• <b>admin</b> / <b>admin123</b> — Pemilik (akses penuh)</p>
+                    <p>• <b>kasir</b> / <b>kasir123</b> — Kasir (kasir + riwayat + retur)</p>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-blue-600 text-white shadow-lg sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16 gap-2">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white text-blue-600 p-2 rounded-xl shadow-md font-extrabold text-xl">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-xl tracking-tight leading-none">WARUNG HANES</h1>
+                        <p class="text-xs text-blue-100 font-medium">Sistem Penjualan & Transaksi Toko</p>
+                    </div>
+                </div>
+
+                <nav class="flex space-x-1 sm:space-x-2">
+                    <button onclick="switchTab('kasir')" id="tab-kasir" class="nav-btn active flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-cash-register mr-2"></i> <span class="hidden sm:inline">Kasir</span>
+                    </button>
+                    <button onclick="switchTab('transaksi')" id="tab-transaksi" class="nav-btn flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-receipt mr-2"></i> <span class="hidden sm:inline">Riwayat</span>
+                    </button>
+                    <button onclick="switchTab('retur')" id="tab-retur" class="nav-btn flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-rotate-left mr-2"></i> <span class="hidden sm:inline">Retur</span>
+                    </button>
+                    <button onclick="switchTab('stok')" id="tab-stok" class="nav-btn flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-boxes-stacked mr-2"></i> <span class="hidden sm:inline">Stok</span>
+                    </button>
+                    <button onclick="switchTab('laporan')" id="tab-laporan" class="nav-btn flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-semibold transition-all">
+                        <i class="fa-solid fa-chart-line mr-2"></i> <span class="hidden sm:inline">Laporan</span>
+                    </button>
+                </nav>
+
+                <div class="hidden md:flex items-center gap-2 bg-blue-700/60 border border-blue-400/40 rounded-xl px-3 py-1.5">
+                    <div class="w-8 h-8 rounded-full bg-white text-blue-700 flex items-center justify-center font-extrabold text-sm" id="user-avatar">A</div>
+                    <div class="leading-tight">
+                        <p class="text-xs font-bold" id="user-display-name">Admin</p>
+                        <p class="text-[10px] text-blue-200" id="user-display-role">Pemilik</p>
+                    </div>
+                    <button onclick="logout()" title="Keluar" class="ml-1 w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center transition">
+                        <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                    </button>
+                </div>
+            </div>
+            <!-- Mobile user bar -->
+            <div class="md:hidden pb-2 flex items-center justify-between text-xs">
+                <span class="text-blue-100">Login sebagai: <b id="user-display-name-mobile">Admin</b> (<span id="user-display-role-mobile">Pemilik</span>)</span>
+                <button onclick="logout()" class="px-2 py-1 bg-white/15 rounded-lg font-bold"><i class="fa-solid fa-right-from-bracket mr-1"></i>Keluar</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <!-- ================= TAB 1: KASIR & KATALOG ================= -->
+        <section id="sec-kasir" class="tab-content grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-7 xl:col-span-8 flex flex-col space-y-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col md:flex-row gap-3 items-center justify-between">
+                    <div class="relative w-full md:w-72">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                        <input type="text" id="search-product" placeholder="Cari nama barang..." oninput="renderProducts()" class="w-full pl-9 pr-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                    </div>
+                    <div class="flex items-center space-x-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none" id="category-pills"></div>
+                </div>
+                <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+            </div>
+
+            <div class="lg:col-span-5 xl:col-span-4">
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 p-5 sticky top-20 flex flex-col justify-between min-h-[580px]">
+                    <div>
+                        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <div class="flex items-center space-x-2">
+                                <i class="fa-solid fa-cart-shopping text-blue-600 text-lg"></i>
+                                <h2 class="font-bold text-slate-800 text-lg">Keranjang Belanja</h2>
+                            </div>
+                            <button onclick="clearCart()" class="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-trash-can"></i> Kosongkan
+                            </button>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Nama Pembeli</label>
+                                <input type="text" id="customer-name" placeholder="Umum / Pelanggan" class="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-500 mb-1">Catatan</label>
+                                <input type="text" id="order-note" placeholder="Contoh: Bungkus" class="w-full px-3 py-1.5 text-xs rounded-lg border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                        <div id="cart-items" class="mt-4 max-h-[220px] overflow-y-auto space-y-2 pr-1"></div>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-100 mt-4">
+                        <div class="flex items-center justify-between text-xs text-slate-500 mb-2">
+                            <span>Diskon (Rp):</span>
+                            <input type="number" id="cart-discount" value="0" min="0" oninput="updateCartSummary()" class="w-24 text-right px-2 py-1 rounded border border-slate-200 text-xs focus:ring-1 focus:ring-blue-500">
+                        </div>
+                        <div class="flex justify-between items-center text-slate-600 text-sm py-1">
+                            <span>Subtotal</span>
+                            <span font-semibold id="cart-subtotal">Rp 0</span>
+                        </div>
+                        <div class="flex justify-between items-center text-slate-600 text-sm py-1">
+                            <span>Diskon</span>
+                            <span class="text-rose-500 font-semibold" id="cart-discount-display">- Rp 0</span>
+                        </div>
+                        <div class="flex justify-between items-center font-extrabold text-slate-800 text-lg py-2 border-t border-dashed border-slate-200">
+                            <span>Total Bayar</span>
+                            <span class="text-blue-600 text-xl" id="cart-total">Rp 0</span>
+                        </div>
+                        <div class="mt-3">
+                            <label class="block text-xs font-semibold text-slate-500 mb-1">Metode Pembayaran</label>
+                            <div class="grid grid-cols-3 gap-2">
+                                <button type="button" onclick="selectPaymentMethod('tunai')" id="pay-tunai" class="pay-method-btn active py-2 rounded-xl text-xs font-bold border flex flex-col items-center gap-1">
+                                    <i class="fa-solid fa-money-bill-wave text-base"></i> Tunai
+                                </button>
+                                <button type="button" onclick="selectPaymentMethod('qris')" id="pay-qris" class="pay-method-btn py-2 rounded-xl text-xs font-bold border flex flex-col items-center gap-1">
+                                    <i class="fa-solid fa-qrcode text-base"></i> QRIS
+                                </button>
+                                <button type="button" onclick="selectPaymentMethod('transfer')" id="pay-transfer" class="pay-method-btn py-2 rounded-xl text-xs font-bold border flex flex-col items-center gap-1">
+                                    <i class="fa-solid fa-building-columns text-base"></i> Transfer
+                                </button>
+                            </div>
+                        </div>
+                        <div id="cash-payment-section" class="mt-3 bg-blue-50 p-3 rounded-xl border border-blue-200">
+                            <div class="flex items-center justify-between gap-2">
+                                <label class="text-xs font-semibold text-blue-800">Uang Diterima:</label>
+                                <div class="relative flex-1">
+                                    <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-blue-700">Rp</span>
+                                    <input type="number" id="cash-given" placeholder="0" oninput="calculateChange()" class="w-full pl-8 pr-2 py-1 text-xs font-bold rounded-lg border border-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center text-xs mt-2 text-blue-900 font-bold">
+                                <span>Kembalian:</span>
+                                <span id="cash-change" class="text-sm text-blue-700">Rp 0</span>
+                            </div>
+                            <div class="flex gap-1.5 mt-2 overflow-x-auto">
+                                <button onclick="setCashGiven(10000)" class="quick-cash-btn">10rb</button>
+                                <button onclick="setCashGiven(20000)" class="quick-cash-btn">20rb</button>
+                                <button onclick="setCashGiven(50000)" class="quick-cash-btn">50rb</button>
+                                <button onclick="setCashGiven(100000)" class="quick-cash-btn">100rb</button>
+                                <button onclick="setExactCash()" class="quick-cash-btn bg-blue-600 text-white hover:bg-blue-700">Uang Pas</button>
+                            </div>
+                        </div>
+                        <button onclick="processCheckout()" class="w-full mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-circle-check"></i> Proses & Cetak Struk
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: RIWAYAT TRANSAKSI ================= -->
+        <section id="sec-transaksi" class="tab-content hidden space-y-4">
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="font-bold text-slate-800 text-lg">Riwayat Transaksi Penjualan</h2>
+                        <p class="text-xs text-slate-500">Daftar semua transaksi yang telah selesai di Warung Hanes</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="exportTransactionsCSV()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-file-csv text-blue-600 text-sm"></i> Export CSV
+                        </button>
+                        <button onclick="clearTransactionHistory()" class="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold rounded-xl flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-trash text-xs"></i> Hapus Semua
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider font-bold">
+                            <tr>
+                                <th class="p-3 rounded-l-xl">ID Struk</th>
+                                <th class="p-3">Waktu</th>
+                                <th class="p-3">Pembeli</th>
+                                <th class="p-3">Detail Barang</th>
+                                <th class="p-3">Metode</th>
+                                <th class="p-3">Total</th>
+                                <th class="p-3 text-center rounded-r-xl">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transaction-history-table" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: RETUR / PENGEMBALIAN BARANG ================= -->
+        <section id="sec-retur" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-5 bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h2 class="font-bold text-slate-800 text-lg mb-1 flex items-center gap-2">
+                        <i class="fa-solid fa-rotate-left text-blue-600"></i> Pengembalian Barang
+                    </h2>
+                    <p class="text-xs text-slate-500 mb-4">Cari struk transaksi, lalu pilih barang & jumlah yang dikembalikan. Stok otomatis bertambah & dana refund tercatat.</p>
+
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Cari ID Struk / Nama Pembeli</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="return-search" placeholder="cth: ORD-123456 atau nama pembeli" oninput="renderReturnSearch()" class="flex-1 px-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    </div>
+
+                    <div id="return-search-result" class="mt-3 space-y-2 max-h-[220px] overflow-y-auto"></div>
+
+                    <div id="return-form" class="hidden mt-4 pt-4 border-t border-dashed border-slate-200">
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs mb-3">
+                            <p class="font-bold text-blue-900">Transaksi terpilih: <span id="return-tx-id">#-</span></p>
+                            <p class="text-blue-800" id="return-tx-info">-</p>
+                        </div>
+                        <div id="return-items-list" class="space-y-2"></div>
+                        <div class="mt-3">
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Alasan Pengembalian</label>
+                            <select id="return-reason" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                <option value="Barang rusak / cacat">Barang rusak / cacat</option>
+                                <option value="Barang kedaluwarsa">Barang kedaluwarsa</option>
+                                <option value="Salah barang">Salah barang</option>
+                                <option value="Pelanggan berubah pikiran">Pelanggan berubah pikiran</option>
+                                <option value="Lainnya">Lainnya</option>
+                            </select>
+                        </div>
+                        <div class="flex justify-between items-center mt-3 py-2 border-t border-slate-100 font-extrabold text-sm">
+                            <span>Total Refund:</span>
+                            <span class="text-blue-700" id="return-total-preview">Rp 0</span>
+                        </div>
+                        <button onclick="processReturn()" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-md">
+                            <i class="fa-solid fa-check mr-1"></i> Proses Pengembalian
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-7 bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h2 class="font-bold text-slate-800 text-lg">Riwayat Pengembalian</h2>
+                            <p class="text-xs text-slate-500">Total dana kembali: <b id="return-grand-total" class="text-blue-700">Rp 0</b></p>
+                        </div>
+                        <button onclick="clearReturnHistory()" class="text-xs text-rose-500 hover:text-rose-700 font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-trash"></i> Hapus Riwayat Retur
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-600">
+                            <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider font-bold">
+                                <tr>
+                                    <th class="p-3 rounded-l-xl">ID Retur</th>
+                                    <th class="p-3">Waktu</th>
+                                    <th class="p-3">Struk Asal</th>
+                                    <th class="p-3">Barang</th>
+                                    <th class="p-3">Refund</th>
+                                    <th class="p-3 text-center rounded-r-xl">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="return-history-table" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 4: KELOLA STOK PRODUK ================= -->
+        <section id="sec-stok" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <div class="lg:col-span-4 bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h2 class="font-bold text-slate-800 text-lg mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-box-open text-blue-600"></i> <span id="form-title">Tambah Produk Baru</span>
+                    </h2>
+                    <form id="product-form" onsubmit="handleProductSubmit(event)" class="space-y-3">
+                        <input type="hidden" id="edit-product-id">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Produk</label>
+                            <input type="text" id="prod-name" required placeholder="Contoh: Minyak Goreng 1L" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Kategori</label>
+                                <select id="prod-category" required class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    <option value="Sembako">Sembako</option>
+                                    <option value="Makanan">Makanan</option>
+                                    <option value="Minuman">Minuman</option>
+                                    <option value="Bumbu">Bumbu & Dapur</option>
+                                    <option value="Kebersihan">Kebersihan</option>
+                                    <option value="Lain-lain">Lain-lain</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Ikon Emoji</label>
+                                <select id="prod-icon" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                    <option value="🛢️">🛢️ Minyak/Cairan</option>
+                                    <option value="🍚">🍚 Beras/Biji</option>
+                                    <option value="🥚">🥚 Telur</option>
+                                    <option value="🍜">🍜 Mie Instant</option>
+                                    <option value="☕">☕ Kopi/Teh</option>
+                                    <option value="🥤">🥤 Minuman Botol</option>
+                                    <option value="🧂">🧂 Bumbu Dapur</option>
+                                    <option value="🧼">🧼 Sabun/Kebersihan</option>
+                                    <option value="🍪">🍪 Snack/Kue</option>
+                                    <option value="📦">📦 Umum</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Harga Jual (Rp)</label>
+                                <input type="number" id="prod-price" required min="100" placeholder="15000" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Stok Awal</label>
+                                <input type="number" id="prod-stock" required min="0" placeholder="50" class="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                            </div>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                            <label class="block text-xs font-bold text-slate-600 mb-1"><i class="fa-solid fa-image text-blue-600 mr-1"></i> Gambar Produk (opsional)</label>
+                            <div class="flex items-center gap-2">
+                                <img id="prod-image-preview" src="" alt="" width="1080" height="1090" class="hidden w-16 rounded-xl object-cover border border-slate-200 bg-white" style="aspect-ratio:1080/1090;">
+                                <div class="flex-1 space-y-1.5">
+                                    <input type="file" id="prod-image-file" accept="image/*" onchange="handleProductImageUpload(event)" class="w-full text-[11px] text-slate-600 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:text-[11px] file:font-bold hover:file:bg-blue-700">
+                                    <input type="text" id="prod-image" placeholder="atau tempel link URL gambar..." oninput="previewProductImageUrl()" class="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-1.5">
+                                <p class="text-[10px] text-slate-400">Otomatis di-resize ke 1080 x 1090 px. Bisa upload atau pakai URL.</p>
+                                <button type="button" onclick="clearProductImage()" class="text-[10px] font-bold text-rose-500 hover:text-rose-700">Hapus gambar</button>
+                            </div>
+                        </div>
+                        <div class="pt-2 flex gap-2">
+                            <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-xl text-xs transition shadow-md">
+                                <i class="fa-solid fa-floppy-disk mr-1"></i> Simpan
+                            </button>
+                            <button type="button" onclick="resetProductForm()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold rounded-xl text-xs transition">Batal</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="lg:col-span-8 bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-slate-800 text-lg">Daftar Inventaris Produk</h2>
+                        <button onclick="resetDefaultProducts()" class="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-rotate-left"></i> Reset Produk Bawaan
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs text-slate-600">
+                            <thead class="bg-slate-100 text-slate-700 uppercase tracking-wider font-bold">
+                                <tr>
+                                    <th class="p-3 rounded-l-xl">Produk</th>
+                                    <th class="p-3">Kategori</th>
+                                    <th class="p-3">Harga Jual</th>
+                                    <th class="p-3">Stok Available</th>
+                                    <th class="p-3 text-center rounded-r-xl">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-table" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 5: LAPORAN PENJUALAN ================= -->
+        <section id="sec-laporan" class="tab-content hidden space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center space-x-4">
+                    <div class="p-3 bg-blue-100 text-blue-600 rounded-xl text-2xl"><i class="fa-solid fa-sack-dollar"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Omset Bersih (stlh Retur)</p>
+                        <h3 class="text-xl font-extrabold text-slate-800" id="report-total-revenue">Rp 0</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center space-x-4">
+                    <div class="p-3 bg-indigo-100 text-indigo-600 rounded-xl text-2xl"><i class="fa-solid fa-cart-check"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Total Transaksi</p>
+                        <h3 class="text-xl font-extrabold text-slate-800" id="report-total-orders">0 Transaksi</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center space-x-4">
+                    <div class="p-3 bg-amber-100 text-amber-600 rounded-xl text-2xl"><i class="fa-solid fa-boxes-packing"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Produk Terjual (Bersih)</p>
+                        <h3 class="text-xl font-extrabold text-slate-800" id="report-total-items">0 Pcs</h3>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80 flex items-center space-x-4">
+                    <div class="p-3 bg-rose-100 text-rose-600 rounded-xl text-2xl"><i class="fa-solid fa-rotate-left"></i></div>
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Total Refund Retur</p>
+                        <h3 class="text-xl font-extrabold text-slate-800" id="report-total-refund">Rp 0</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="font-bold text-slate-800 text-base mb-4 flex items-center gap-2"><i class="fa-solid fa-fire text-amber-500"></i> Produk Terlaris</h3>
+                    <div id="top-products-list" class="space-y-3"></div>
+                </div>
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200/80">
+                    <h3 class="font-bold text-slate-800 text-base mb-4 flex items-center gap-2"><i class="fa-solid fa-wallet text-blue-600"></i> Metode Pembayaran</h3>
+                    <div id="payment-methods-breakdown" class="space-y-3"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 mt-12 py-4 text-center text-xs text-slate-500">
+        <p>© 2026 <strong>Warung Hanes</strong> - Aplikasi Penjualan & Transaksi Online Warung</p>
+    </footer>
+
+    <!-- ================= MODAL CETAK STRUK ================= -->
+    <div id="receipt-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
+            <div id="printable-receipt" class="p-6 font-mono text-slate-800 text-xs bg-white">
+                <div class="text-center pb-3 border-b border-dashed border-slate-300">
+                    <h2 class="font-black text-base uppercase text-slate-900">WARUNG HANES</h2>
+                    <p class="text-[10px] text-slate-500">Jl. Utama Warung Hanes No. 01</p>
+                    <p class="text-[10px] text-slate-500">Telp/WA: 0812-3456-7890</p>
+                </div>
+                <div class="py-3 border-b border-dashed border-slate-300 space-y-1 text-[11px]">
+                    <div class="flex justify-between"><span>No. Struk:</span><span id="rec-id" class="font-bold">#ORD-0000</span></div>
+                    <div class="flex justify-between"><span>Tanggal:</span><span id="rec-date">-</span></div>
+                    <div class="flex justify-between"><span>Pelanggan:</span><span id="rec-customer" class="font-bold">Umum</span></div>
+                    <div class="flex justify-between"><span>Metode:</span><span id="rec-method" class="font-bold uppercase">TUNAI</span></div>
+                    <div class="flex justify-between"><span>Kasir:</span><span id="rec-cashier" class="font-bold">-</span></div>
+                </div>
+                <div class="py-3 border-b border-dashed border-slate-300 space-y-2" id="rec-items"></div>
+                <div class="py-3 space-y-1 text-[11px]">
+                    <div class="flex justify-between text-slate-600"><span>Subtotal</span><span id="rec-subtotal">Rp 0</span></div>
+                    <div class="flex justify-between text-slate-600"><span>Diskon</span><span id="rec-discount">- Rp 0</span></div>
+                    <div class="flex justify-between font-extrabold text-sm text-slate-900 pt-1 border-t border-slate-200"><span>TOTAL</span><span id="rec-total">Rp 0</span></div>
+                    <div class="flex justify-between text-slate-600 text-[10px] pt-1" id="rec-cash-row"><span>Bayar (Tunai)</span><span id="rec-cash">Rp 0</span></div>
+                    <div class="flex justify-between text-slate-600 text-[10px]" id="rec-change-row"><span>Kembalian</span><span id="rec-change">Rp 0</span></div>
+                </div>
+                <div class="text-center pt-3 border-t border-dashed border-slate-300 text-[10px] text-slate-500">
+                    <p class="font-bold text-slate-700">*** TERIMA KASIH ***</p>
+                    <p>Barang yang sudah dibeli tidak dapat ditukar/dikembalikan.</p>
+                </div>
+            </div>
+            <div class="bg-slate-50 p-4 border-t border-slate-200 flex flex-col gap-2">
+                <button onclick="printReceipt()" class="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-print"></i> Cetak / Simpan Struk (PDF)
+                </button>
+                <div class="flex gap-2">
+                    <button onclick="shareReceiptWhatsApp()" class="flex-1 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+                        <i class="fa-brands fa-whatsapp text-sm"></i> Kirim WA
+                    </button>
+                    <button onclick="closeReceiptModal()" class="flex-1 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl text-xs transition">Selesai</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
