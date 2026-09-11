@@ -1,0 +1,7 @@
+{
+  "projects": {
+    "& \"$env:LOCALAPPDATA\\Microsoft\\WinGet\\Packages\\OpenJS.NodeJS.LTS_Microsoft.Winget.Source_8wekyb3d8bbwe\\node-v24.19.0-win-x64\\firebase.cmd\" deploy --only hosting": "device-streaming-8dd9a1da"
+  },
+  "targets": {},
+  "etags": {}
+}
