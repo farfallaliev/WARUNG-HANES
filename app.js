@@ -47,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderReturnSearch();
     renderReturnHistory();
     renderReports();
+    syncFromCloud(); // tarik & gabungkan data cloud di background
 });
 
 // ---------- STORAGE ----------
@@ -72,6 +73,165 @@ function saveData() {
     localStorage.setItem('hanes_transactions', JSON.stringify(transactions));
     localStorage.setItem('hanes_returns', JSON.stringify(returns));
     localStorage.setItem('hanes_users', JSON.stringify(users));
+}
+
+// ---------- CLOUD SYNC (FIRESTORE) ----------
+// localStorage tetap dipakai sebagai cache offline agar aplikasi cepat & tahan offline.
+// Firestore dipakai sebagai database cloud agar data sama di semua perangkat.
+// Setiap tulis ke cloud bersifat fire-and-forget: gagal = tetap jalan lokal.
+let cloudState = 'local'; // local | online | error
+
+function setCloudStatus(mode) {
+    cloudState = mode;
+    const el = document.getElementById('cloud-status');
+    if (!el) return;
+    if (mode === 'online') { el.textContent = '☁️ Database: tersambung (cloud)'; el.className = 'font-bold text-blue-700'; }
+    else if (mode === 'error') { el.textContent = '☁️ Database: lokal (cloud gagal dijangkau)'; el.className = 'font-bold text-amber-600'; }
+    else { el.textContent = '☁️ Database: lokal'; el.className = ''; }
+}
+
+function cloudDb() {
+    try {
+        if (typeof firebase === 'undefined' || !window.HANES_FIREBASE_CONFIG) return null;
+        if (!firebase.apps || firebase.apps.length === 0) {
+            firebase.initializeApp(window.HANES_FIREBASE_CONFIG);
+        }
+        return firebase.firestore();
+    } catch (e) {
+        return null;
+    }
+}
+
+function mergeById(localArr, cloudArr) {
+    const map = {};
+    (localArr || []).forEach(o => { if (o && o.id) map[o.id] = o; });
+    (cloudArr || []).forEach(o => { if (o && o.id) map[o.id] = o; }); // cloud menang bila id sama
+    return Object.values(map).sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+}
+
+function sanitizeProduct(p) {
+    return { id: p.id, name: p.name || '', category: p.category || 'Lain-lain', icon: p.icon || '📦', price: Number(p.price) || 0, stock: Number(p.stock) || 0, image: p.image || '' };
+}
+
+// Items transaksi/retur disimpan ke cloud TANPA gambar (hemat ukuran dokumen).
+function stripImages(items) {
+    return (items || []).map(i => ({ id: i.id, name: i.name, icon: i.icon || '', price: i.price, qty: i.qty }));
+}
+
+function renderAll() {
+    renderProducts(); renderInventoryTable(); renderTransactionHistory();
+    renderReturnSearch(); renderReturnHistory(); renderReports();
+}
+
+// Tarik data dari cloud saat aplikasi dibuka; seed cloud bila masih kosong.
+async function syncFromCloud() {
+    const db = cloudDb();
+    if (!db) { setCloudStatus('local'); return; }
+    try {
+        const [pSnap, tSnap, rSnap] = await Promise.all([
+            db.collection('products').get(),
+            db.collection('transactions').orderBy('date', 'desc').limit(200).get(),
+            db.collection('returns').orderBy('date', 'desc').limit(200).get()
+        ]);
+        const cloudProducts = pSnap.docs.map(d => d.data());
+        const cloudTx = tSnap.docs.map(d => d.data());
+        const cloudRet = rSnap.docs.map(d => d.data());
+
+        const batch = db.batch();
+        let needCommit = false;
+        if (cloudProducts.length > 0) {
+            products = cloudProducts;
+        } else if (products.length > 0) {
+            products.forEach(p => batch.set(db.collection('products').doc(p.id), sanitizeProduct(p)));
+            needCommit = true;
+        }
+        if (cloudTx.length > 0 || cloudRet.length > 0) {
+            transactions = mergeById(transactions, cloudTx);
+            returns = mergeById(returns, cloudRet);
+        } else {
+            transactions.forEach(tx => batch.set(db.collection('transactions').doc(tx.id), cloudTxPayload(tx)));
+            returns.forEach(r => batch.set(db.collection('returns').doc(r.id), cloudReturnPayload(r)));
+            if (transactions.length > 0 || returns.length > 0) needCommit = true;
+        }
+        if (needCommit) await batch.commit();
+
+        saveData(); // simpan hasil gabungan ke localStorage
+        renderAll();
+        setCloudStatus('online');
+    } catch (e) {
+        console.warn('Sinkron cloud gagal, memakai data lokal:', e);
+        setCloudStatus('error');
+    }
+}
+
+function cloudTxPayload(tx) {
+    return { id: tx.id, date: tx.date, customer: tx.customer || '', note: tx.note || '', items: stripImages(tx.items), subtotal: tx.subtotal, discount: tx.discount, total: tx.total, paymentMethod: tx.paymentMethod, cashGiven: tx.cashGiven, cashChange: tx.cashChange, cashier: tx.cashier || '' };
+}
+
+function cloudReturnPayload(r) {
+    return { id: r.id, date: r.date, originalTxId: r.originalTxId, originalCustomer: r.originalCustomer || '', items: stripImages(r.items), totalRefund: r.totalRefund, reason: r.reason || '', cashier: r.cashier || '' };
+}
+
+function cloudUpsertProducts(list) {
+    try {
+        const db = cloudDb();
+        if (!db || !list || list.length === 0) return;
+        const batch = db.batch();
+        list.forEach(p => { if (p && p.id) batch.set(db.collection('products').doc(p.id), sanitizeProduct(p)); });
+        batch.commit().then(() => setCloudStatus('online')).catch(() => setCloudStatus('error'));
+    } catch (e) { /* abaikan: lokal tetap tersimpan */ }
+}
+
+function cloudDeleteDoc(collectionName, docId) {
+    try {
+        const db = cloudDb();
+        if (!db || !docId) return;
+        db.collection(collectionName).doc(docId).delete()
+            .then(() => setCloudStatus('online')).catch(() => setCloudStatus('error'));
+    } catch (e) { /* abaikan */ }
+}
+
+function cloudClearCollection(collectionName) {
+    try {
+        const db = cloudDb();
+        if (!db) return;
+        db.collection(collectionName).get().then(snap => {
+            const batch = db.batch();
+            snap.docs.forEach(d => batch.delete(d.ref));
+            return batch.commit();
+        }).then(() => setCloudStatus('online')).catch(() => setCloudStatus('error'));
+    } catch (e) { /* abaikan */ }
+}
+
+function cloudAddTransaction(tx) {
+    try {
+        const db = cloudDb();
+        if (!db) return;
+        db.collection('transactions').doc(tx.id).set(cloudTxPayload(tx))
+            .then(() => setCloudStatus('online')).catch(() => setCloudStatus('error'));
+    } catch (e) { /* abaikan */ }
+}
+
+function cloudAddReturn(ret) {
+    try {
+        const db = cloudDb();
+        if (!db) return;
+        db.collection('returns').doc(ret.id).set(cloudReturnPayload(ret))
+            .then(() => setCloudStatus('online')).catch(() => setCloudStatus('error'));
+    } catch (e) { /* abaikan */ }
+}
+
+function cloudReplaceProducts(list) {
+    try {
+        const db = cloudDb();
+        if (!db) return;
+        db.collection('products').get().then(snap => {
+            const batch = db.batch();
+            snap.docs.forEach(d => batch.delete(d.ref));
+            (list || []).forEach(p => { if (p && p.id) batch.set(db.collection('products').doc(p.id), sanitizeProduct(p)); });
+            return batch.commit();
+        }).then(() => setCloudStatus('online')).catch(() => setCloudStatus('error'));
+    } catch (e) { /* abaikan */ }
 }
 
 function formatRupiah(amount) {
@@ -413,6 +573,8 @@ function processCheckout() {
     });
     transactions.unshift(tx);
     saveData();
+    cloudAddTransaction(tx);
+    cloudUpsertProducts(cart.map(item => products.find(p => p.id === item.id)).filter(Boolean));
     cart = [];
     document.getElementById('customer-name').value = '';
     document.getElementById('order-note').value = '';
@@ -485,6 +647,7 @@ function clearTransactionHistory() {
     if (currentUser && currentUser.role !== 'admin') { alert('Hanya Admin yang boleh menghapus riwayat!'); return; }
     if (confirm('Hapus seluruh riwayat transaksi?')) {
         transactions = []; saveData(); renderTransactionHistory(); renderReports(); renderReturnSearch();
+        cloudClearCollection('transactions');
     }
 }
 
@@ -620,6 +783,8 @@ function processReturn() {
     });
     returns.unshift(ret);
     saveData();
+    cloudAddReturn(ret);
+    cloudUpsertProducts(items.map(ri => products.find(p => p.id === ri.id)).filter(Boolean));
     selectedReturnTxId = null;
     returnQtyMap = {};
     const si = document.getElementById('return-search');
@@ -664,6 +829,8 @@ function deleteReturn(retId) {
     });
     returns = returns.filter(x => x.id !== retId);
     saveData();
+    cloudDeleteDoc('returns', retId);
+    cloudUpsertProducts(r.items.map(ri => products.find(p => p.id === ri.id)).filter(Boolean));
     renderReturnHistory(); renderReports(); renderProducts(); renderInventoryTable();
 }
 
@@ -677,6 +844,8 @@ function clearReturnHistory() {
     }));
     returns = [];
     saveData();
+    cloudClearCollection('returns');
+    cloudUpsertProducts(products);
     renderReturnHistory(); renderReports(); renderProducts(); renderInventoryTable();
 }
 
@@ -710,8 +879,11 @@ function handleProductSubmit(e) {
     if (editId) {
         const pr = products.find(p => p.id === editId);
         if (pr) Object.assign(pr, { name, category, icon, price, stock, image });
+        cloudUpsertProducts([products.find(p => p.id === editId)].filter(Boolean));
     } else {
-        products.unshift({ id: 'PRD-' + Date.now().toString().slice(-6), name, category, icon, price, stock, image });
+        const np = { id: 'PRD-' + Date.now().toString().slice(-6), name, category, icon, price, stock, image };
+        products.unshift(np);
+        cloudUpsertProducts([np]);
     }
     saveData(); resetProductForm(); renderInventoryTable(); renderProducts();
 }
@@ -740,6 +912,7 @@ function deleteProduct(id) {
     if (confirm('Hapus produk ini?')) {
         products = products.filter(p => p.id !== id);
         saveData(); renderInventoryTable(); renderProducts();
+        cloudDeleteDoc('products', id);
     }
 }
 
@@ -755,6 +928,7 @@ function resetDefaultProducts() {
     if (confirm('Reset ke produk bawaan?')) {
         products = [...DEFAULT_PRODUCTS];
         saveData(); renderInventoryTable(); renderProducts();
+        cloudReplaceProducts(products);
     }
 }
 

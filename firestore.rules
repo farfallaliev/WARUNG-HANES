@@ -1,0 +1,21 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Koleksi aplikasi Warung Hanes.
+    // Catatan: aplikasi memakai login lokal (bukan Firebase Auth),
+    // jadi rules dibatasi per koleksi. Jangan simpan data sensitif lain di database ini.
+    match /products/{docId} {
+      allow read, write: if true;
+    }
+    match /transactions/{docId} {
+      allow read, write: if true;
+    }
+    match /returns/{docId} {
+      allow read, write: if true;
+    }
+    // Koleksi lain: tolak semua akses.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

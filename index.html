@@ -450,7 +450,7 @@
     </main>
 
     <footer class="bg-white border-t border-slate-200 mt-12 py-4 text-center text-xs text-slate-500">
-        <p>© 2026 <strong>Warung Hanes</strong> - Aplikasi Penjualan & Transaksi Online Warung</p>
+        <p>© 2026 <strong>Warung Hanes</strong> - Aplikasi Penjualan & Transaksi Online Warung<br><span id="cloud-status">☁️ Database: lokal</span></p>
     </footer>
 
     <!-- ================= MODAL CETAK STRUK ================= -->
@@ -496,6 +496,19 @@
         </div>
     </div>
 
+    <!-- Firebase SDK (Auth tidak dipakai; hanya Firestore untuk database cloud) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <script>
+        window.HANES_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyA2pLdsu6BSGO7d2yEL4XXRUtxHZoiT1YI",
+            authDomain: "warunghanes.firebaseapp.com",
+            projectId: "warunghanes",
+            storageBucket: "warunghanes.firebasestorage.app",
+            messagingSenderId: "693781190833",
+            appId: "1:693781190833:web:e748f17b31c5e8dfcdaa90"
+        };
+    </script>
     <script src="app.js"></script>
 </body>
 </html>
